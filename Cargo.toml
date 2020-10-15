@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["gak <gak@gak0.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+libp2p = { version = "0.28.1", features = ["tcp-tokio", "deflate", "dns", "floodsub", "identify", "kad", "gossipsub", "mplex", "noise", "ping", "plaintext", "pnet", "request-response", "secp256k1", "uds", "wasm-ext", "websocket", "yamux"] }
+tokio = { version = "0.2.22", features = ["full"] }
+anyhow = "1.0.33"
+futures = "0.3.6"
