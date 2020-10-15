@@ -127,11 +127,6 @@ pub fn run() -> Result<()> {
         swarm.kademlia.get_closest_peers(peer_id);
     };
 
-    // println!("Searching for the closest peers to {:?}", to_search);
-    // // swarm.get_closest_peers(to_search);
-    // // behaviour.kademlia.get_closest_peers(to_search);
-    // swarm.kademlia.get_closest_peers(to_search);
-
     // Dial the peer identified by the multi-address given as the second
     // command-line argument, if any.
     // if let Some(addr) = std::env::args().nth(1) {

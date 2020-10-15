@@ -1,5 +1,5 @@
 [package]
-name = "civ5-p2p-ui"
+name = "civ5-p2p-cli"
 version = "0.1.0"
 authors = ["gak <gak@gak0.com>"]
 edition = "2018"
@@ -8,4 +8,4 @@ edition = "2018"
 civ5-p2p-core = { path = "../civ5-p2p-core" }
 
 anyhow = "1.0.33"
-iced = "0.1.1"
+rustyline = "6.3.0"

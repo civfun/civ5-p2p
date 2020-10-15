@@ -4,9 +4,17 @@ version = "0.1.0"
 authors = ["gak <gak@gak0.com>"]
 edition = "2018"
 
+[[bin]]
+name = "civ5-p2p-cli"
+path = "civ5-p2p-cli/src/main.rs"
+
+[[bin]]
+name = "civ5-p2p-ui"
+path = "civ5-p2p-ui/src/main.rs"
+
 [workspace]
 members = [
     "civ5-p2p-core",
+    "civ5-p2p-cli",
     "civ5-p2p-ui",
 ]
-
