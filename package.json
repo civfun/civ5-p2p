@@ -1,0 +1,19 @@
+{
+  "name": "civ5-p2p",
+  "version": "0.0.1",
+  "description": "A decentralised Civilization V hot-seat client.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/civfun/civ5-p2p.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/civfun/civ5-p2p/issues"
+  },
+  "homepage": "https://github.com/civfun/civ5-p2p#readme"
+}
