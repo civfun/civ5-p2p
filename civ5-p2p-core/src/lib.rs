@@ -1,3 +1,4 @@
+use async_std::task;
 use futures::{future, prelude::*};
 use std::{task::{Context, Poll}, env};
 use std::time::Duration;
@@ -5,25 +6,25 @@ use libp2p::ping::{Ping, PingEvent, PingSuccess, PingFailure, PingConfig};
 use libp2p::kad::{Kademlia, KademliaEvent};
 use libp2p::kad::store::MemoryStore;
 use libp2p::swarm::NetworkBehaviourEventProcess;
-use libp2p::identify::IdentifyEvent;
+use libp2p::identify::{IdentifyEvent, Identify};
 use libp2p::identity::Keypair;
 use libp2p::{floodsub, Transport, tcp, dns, websocket, noise, yamux, mplex, NetworkBehaviour, Swarm, identity};
 use anyhow::Result;
-use tokio::{main, runtime};
-use libp2p::tcp::TokioTcpConfig;
-use libp2p::core::PeerId;
+use libp2p::core::{PeerId, Multiaddr};
+use std::str::FromStr;
+use std::process::exit;
 
 #[derive(NetworkBehaviour)]
 struct MyBehaviour {
     // gossipsub: Gossipsub,
-    // identify: Identify,
+    identify: Identify,
     ping: Ping,
     kademlia: Kademlia<MemoryStore>,
 }
 
 impl NetworkBehaviourEventProcess<KademliaEvent> for MyBehaviour {
     fn inject_event(&mut self, event: KademliaEvent) {
-        dbg!(&event);
+        println!("kad: {:?}", &event);
     }
 }
 
@@ -31,6 +32,14 @@ impl NetworkBehaviourEventProcess<IdentifyEvent> for MyBehaviour {
     // Called when `identify` produces an event.
     fn inject_event(&mut self, event: IdentifyEvent) {
         println!("identify: {:?}", event);
+        match event {
+            IdentifyEvent::Received { peer_id, info, .. } => {
+                for addr in info.listen_addrs {
+                    self.kademlia.add_address(&peer_id, addr);
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -70,8 +79,7 @@ impl NetworkBehaviourEventProcess<PingEvent> for MyBehaviour {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+pub fn run() -> Result<()> {
     // Create a random PeerId
     let keypair = Keypair::generate_ed25519();
     let peer_id = PeerId::from(keypair.public());
@@ -91,30 +99,38 @@ async fn main() -> Result<()> {
 
     let mut behaviour = MyBehaviour {
         // gossipsub: Gossipsub::new(MessageAuthenticity::Signed(local_key.clone()), gossipsub_config),
-        // identify: Identify::new(
-        //     "/ipfs/0.1.0".into(),
-        //     "rust-ipfs-example".into(),
-        //     id_keys.public(),
-        // ),
+        identify: Identify::new(
+            "/civ5/0.1.0".into(),
+            "civ5".into(),
+            keypair.public(),
+        ),
         ping: Ping::new(PingConfig::new()),
         kademlia: Kademlia::new(peer_id.clone(), store),
     };
 
     // Create a Swarm that establishes connections through the given transport
     // and applies the ping behaviour on each connection.
-    let mut swarm = Swarm::new(transport, behaviour, peer_id);
+    let mut swarm = Swarm::new(transport, behaviour, peer_id.clone());
 
-    // Order Kademlia to search for a peer.
-    let to_search: PeerId = if let Some(peer_id) = env::args().nth(1) {
-        peer_id.parse()?
-    } else {
-        identity::Keypair::generate_ed25519().public().into()
+    if let Some(bootstrap_addr) = env::args().nth(2) {
+        let bootstrap_peer_id = env::args().nth(1).unwrap();
+        let bootstrap_peer_id = PeerId::from_str(&bootstrap_peer_id)?;
+        let bootstrap_addr: Multiaddr = bootstrap_addr.parse()?;
+        swarm.kademlia.add_address(&bootstrap_peer_id, bootstrap_addr);
+        // println!("Bootstrapping node to join DHT");
+        swarm.kademlia.bootstrap()?;
     };
 
-    println!("Searching for the closest peers to {:?}", to_search);
-    // swarm.get_closest_peers(to_search);
-    // behaviour.kademlia.get_closest_peers(to_search);
-    swarm.kademlia.get_closest_peers(to_search);
+    // Order Kademlia to search for a peer.
+    if let Some(peer_id) = env::args().nth(3) {
+        let peer_id: PeerId = peer_id.parse()?;
+        swarm.kademlia.get_closest_peers(peer_id);
+    };
+
+    // println!("Searching for the closest peers to {:?}", to_search);
+    // // swarm.get_closest_peers(to_search);
+    // // behaviour.kademlia.get_closest_peers(to_search);
+    // swarm.kademlia.get_closest_peers(to_search);
 
     // Dial the peer identified by the multi-address given as the second
     // command-line argument, if any.
@@ -128,25 +144,27 @@ async fn main() -> Result<()> {
     Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
 
     let mut listening = false;
-    future::poll_fn(move |cx: &mut Context<'_>| {
+    let peer_id = peer_id.clone();
+    task::block_on(future::poll_fn(move |cx: &mut Context<'_>| {
         loop {
             match swarm.poll_next_unpin(cx) {
-                Poll::Ready(Some(event)) => println!("event {:?}", event),
+                Poll::Ready(Some(event)) => println!("{:?}", event),
                 Poll::Ready(None) => return Poll::Ready(()),
                 Poll::Pending => {
                     if !listening {
                         for addr in Swarm::listeners(&swarm) {
-                            println!("Listening on {}", addr);
+                            println!("Listening on {} {}", peer_id, addr);
                             listening = true;
                         }
                     }
-                    return Poll::Pending;
+                    return Poll::Pending
                 }
             }
         }
-    }).await;
+    }));
 
-    Ok(())
+    return Ok(());
+
 }
 
 // fn build_transport() -> Result<Box<dyn Transport>> {
@@ -160,9 +178,9 @@ async fn main() -> Result<()> {
 //         .expect("Signing libp2p-noise static DH keypair failed.");
 //
 //     Ok(Box::new(transport
-//         .upgrade(core::upgrade::Version::V1)
+//         .upgrade(civ5-p2p-core::upgrade::Version::V1)
 //         .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-//         .multiplex(core::upgrade::SelectUpgrade::new(yamux::Config::default(), mplex::MplexConfig::new()))
-//         .map(|(peer, muxer), _| (peer, core::muxing::StreamMuxerBox::new(muxer)))
+//         .multiplex(civ5-p2p-core::upgrade::SelectUpgrade::new(yamux::Config::default(), mplex::MplexConfig::new()))
+//         .map(|(peer, muxer), _| (peer, civ5-p2p-core::muxing::StreamMuxerBox::new(muxer)))
 //         .timeout(std::time::Duration::from_secs(20))))
 // }

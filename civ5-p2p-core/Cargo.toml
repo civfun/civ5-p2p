@@ -1,0 +1,11 @@
+[package]
+name = "civ5-p2p-core"
+version = "0.1.0"
+authors = ["gak <gak@gak0.com>"]
+edition = "2018"
+
+[dependencies]
+libp2p = { version = "0.28.1" }
+async-std = "1.6.5"
+anyhow = "1.0.33"
+futures = "0.3.6"
