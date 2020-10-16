@@ -1,8 +1,7 @@
-use civ5_p2p_core::run;
 use anyhow::Result;
 use iced::{executor, Application, Command, Element, Settings, Text};
 
-fn main() -> Result<()> {
+pub fn run_ui() -> Result<()> {
     App::run(Settings::default());
 
     // Ok(run()?)

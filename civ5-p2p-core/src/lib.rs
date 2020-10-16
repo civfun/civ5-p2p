@@ -1,14 +1,13 @@
 use async_std::task;
 use futures::{future, prelude::*};
 use std::{task::{Context, Poll}, env};
-use std::time::Duration;
 use libp2p::ping::{Ping, PingEvent, PingSuccess, PingFailure, PingConfig};
 use libp2p::kad::{Kademlia, KademliaEvent};
 use libp2p::kad::store::MemoryStore;
 use libp2p::swarm::NetworkBehaviourEventProcess;
 use libp2p::identify::{IdentifyEvent, Identify};
 use libp2p::identity::Keypair;
-use libp2p::{floodsub, Transport, tcp, dns, websocket, noise, yamux, mplex, NetworkBehaviour, Swarm, identity};
+use libp2p::{dns, websocket, noise, yamux, mplex, NetworkBehaviour, Swarm, identity};
 use anyhow::Result;
 use libp2p::core::{PeerId, Multiaddr};
 use std::str::FromStr;

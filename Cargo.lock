@@ -538,12 +538,25 @@ name = "civ5-p2p"
 version = "0.1.0"
 
 [[package]]
+name = "civ5-p2p-app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "civ5-p2p-cli",
+ "civ5-p2p-core",
+ "civ5-p2p-ui",
+]
+
+[[package]]
 name = "civ5-p2p-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-std",
  "civ5-p2p-core",
+ "futures 0.3.6",
+ "libp2p",
  "rustyline",
 ]
 

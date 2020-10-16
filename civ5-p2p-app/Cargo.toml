@@ -1,14 +1,13 @@
 [package]
-name = "civ5-p2p-cli"
+name = "civ5-p2p-app"
 version = "0.1.0"
 authors = ["gak <gak@gak0.com>"]
 edition = "2018"
 
 [dependencies]
 civ5-p2p-core = { path = "../civ5-p2p-core" }
+civ5-p2p-cli = { path = "../civ5-p2p-cli" }
+civ5-p2p-ui = { path = "../civ5-p2p-ui" }
 
-libp2p = { version = "0.28.1" }
 async-std = { version = "1.6.5", features = ["attributes"] }
 anyhow = "1.0.33"
-rustyline = "6.3.0"
-futures = "0.3.6"
