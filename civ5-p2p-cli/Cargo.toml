@@ -7,5 +7,6 @@ edition = "2018"
 [dependencies]
 civ5-p2p-core = { path = "../civ5-p2p-core" }
 
+async-std = { version = "1.6.5", features = ["attributes"] }
 anyhow = "1.0.33"
 rustyline = "6.3.0"
