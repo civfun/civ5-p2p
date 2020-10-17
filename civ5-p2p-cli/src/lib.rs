@@ -63,6 +63,12 @@ impl CommandLineInterface {
                     parts.get(2).unwrap().parse()?,
                 );
                 self.action_tx.send(action).await?;
+            },
+            Some("msg") => {
+                let action = Action::Message(
+                    parts.get(1).unwrap().to_string(),
+                );
+                self.action_tx.send(action).await?;
             }
             Some(cmd) => println!("unknown command: {}", cmd),
         };

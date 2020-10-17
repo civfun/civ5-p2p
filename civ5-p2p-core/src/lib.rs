@@ -4,7 +4,7 @@ use std::{task::{Context, Poll}, env};
 use libp2p::ping::{Ping, PingEvent, PingSuccess, PingFailure, PingConfig};
 use libp2p::kad::{Kademlia, KademliaEvent};
 use libp2p::kad::store::MemoryStore;
-use libp2p::swarm::NetworkBehaviourEventProcess;
+use libp2p::swarm::{NetworkBehaviourEventProcess, NetworkBehaviour};
 use libp2p::identify::{IdentifyEvent, Identify};
 use libp2p::identity::Keypair;
 use libp2p::{dns, websocket, noise, yamux, mplex, NetworkBehaviour, Swarm, identity};
@@ -12,6 +12,7 @@ use anyhow::Result;
 use libp2p::core::{PeerId, Multiaddr};
 use std::str::FromStr;
 use futures::channel::mpsc;
+use libp2p::gossipsub::{Topic, Gossipsub, GossipsubEvent, GossipsubConfig, MessageAuthenticity};
 
 #[derive(NetworkBehaviour)]
 struct Behaviour {
@@ -19,6 +20,13 @@ struct Behaviour {
     identify: Identify,
     ping: Ping,
     kademlia: Kademlia<MemoryStore>,
+    gossipsub: Gossipsub,
+}
+
+impl NetworkBehaviourEventProcess<GossipsubEvent> for Behaviour {
+    fn inject_event(&mut self, event: GossipsubEvent) {
+        println!("gossip: {:?}", &event);
+    }
 }
 
 impl NetworkBehaviourEventProcess<KademliaEvent> for Behaviour {
@@ -80,6 +88,7 @@ impl NetworkBehaviourEventProcess<PingEvent> for Behaviour {
 
 pub enum Action {
     Bootstrap(PeerId, Multiaddr),
+    Message(String),
 }
 
 pub enum Event {}
@@ -104,16 +113,15 @@ impl Civ5p2p {
         let peer_id = PeerId::from(self.keypair.public());
         println!("Local peer id: {:?}", peer_id);
 
-        // let secret = match &local_key {
-        //     Keypair::Ed25519(ed) => { ed.encode() }
-        //     _ => panic!("unknown key type")
-        // };
-        // dbg!(&secret);
-
         let transport = libp2p::build_development_transport(self.keypair.clone())?;
 
         let store = MemoryStore::new(peer_id.clone());
         // let mut behaviour = Kademlia::with_config(peer_id.clone(), store, cfg);
+
+        let topic = Topic::new("global".into());
+        let gossipsub_config = GossipsubConfig::default();
+        let mut gossipsub = Gossipsub::new(MessageAuthenticity::Signed(self.keypair.clone()), gossipsub_config);
+        gossipsub.subscribe(topic.clone());
 
         let mut behaviour = Behaviour {
             // gossipsub: Gossipsub::new(MessageAuthenticity::Signed(local_key.clone()), gossipsub_config),
@@ -124,26 +132,27 @@ impl Civ5p2p {
             ),
             ping: Ping::new(PingConfig::new()),
             kademlia: Kademlia::new(peer_id.clone(), store),
+            gossipsub,
         };
 
         // Create a Swarm that establishes connections through the given transport
         // and applies the ping behaviour on each connection.
         let mut swarm = Swarm::new(transport, behaviour, peer_id.clone());
 
-        if let Some(bootstrap_addr) = env::args().nth(2) {
-            let bootstrap_peer_id = env::args().nth(1).unwrap();
-            let bootstrap_peer_id = PeerId::from_str(&bootstrap_peer_id)?;
-            let bootstrap_addr: Multiaddr = bootstrap_addr.parse()?;
-            swarm.kademlia.add_address(&bootstrap_peer_id, bootstrap_addr);
-            // println!("Bootstrapping node to join DHT");
-            swarm.kademlia.bootstrap()?;
-        };
+        // if let Some(bootstrap_addr) = env::args().nth(2) {
+        //     let bootstrap_peer_id = env::args().nth(1).unwrap();
+        //     let bootstrap_peer_id = PeerId::from_str(&bootstrap_peer_id)?;
+        //     let bootstrap_addr: Multiaddr = bootstrap_addr.parse()?;
+        //     swarm.kademlia.add_address(&bootstrap_peer_id, bootstrap_addr);
+        //     // println!("Bootstrapping node to join DHT");
+        //     swarm.kademlia.bootstrap()?;
+        // };
 
-        // Order Kademlia to search for a peer.
-        if let Some(peer_id) = env::args().nth(3) {
-            let peer_id: PeerId = peer_id.parse()?;
-            swarm.kademlia.get_closest_peers(peer_id);
-        };
+        // // Order Kademlia to search for a peer.
+        // if let Some(peer_id) = env::args().nth(3) {
+        //     let peer_id: PeerId = peer_id.parse()?;
+        //     swarm.kademlia.get_closest_peers(peer_id);
+        // };
 
         // Dial the peer identified by the multi-address given as the second
         // command-line argument, if any.
@@ -157,7 +166,6 @@ impl Civ5p2p {
         Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
 
         let mut listening = false;
-
         task::spawn(future::poll_fn(move |cx: &mut Context<'_>| {
             loop {
                 match actions_rx.poll_next_unpin(cx) {
@@ -167,6 +175,9 @@ impl Civ5p2p {
                             Action::Bootstrap(peer_id, addr) => {
                                 swarm.kademlia.add_address(&peer_id, addr);
                                 swarm.kademlia.bootstrap().unwrap();
+                            }
+                            Action::Message(msg) => {
+                                swarm.gossipsub.publish(&topic, msg).unwrap();
                             }
                         }
                     }
