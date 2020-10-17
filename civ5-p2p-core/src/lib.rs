@@ -7,16 +7,14 @@ use libp2p::kad::store::MemoryStore;
 use libp2p::swarm::{NetworkBehaviourEventProcess, NetworkBehaviour};
 use libp2p::identify::{IdentifyEvent, Identify};
 use libp2p::identity::Keypair;
-use libp2p::{dns, websocket, noise, yamux, mplex, NetworkBehaviour, Swarm, identity};
+use libp2p::{NetworkBehaviour, Swarm, identity};
 use anyhow::Result;
 use libp2p::core::{PeerId, Multiaddr};
-use std::str::FromStr;
 use futures::channel::mpsc;
 use libp2p::gossipsub::{Topic, Gossipsub, GossipsubEvent, GossipsubConfig, MessageAuthenticity};
 
 #[derive(NetworkBehaviour)]
 struct Behaviour {
-    // gossipsub: Gossipsub,
     identify: Identify,
     ping: Ping,
     kademlia: Kademlia<MemoryStore>,

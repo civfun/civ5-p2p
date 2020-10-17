@@ -3,6 +3,7 @@ name = "civ5-p2p-core"
 version = "0.1.0"
 authors = ["gak <gak@gak0.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 libp2p = { version = "0.28.1" }
