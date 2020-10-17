@@ -123,8 +123,7 @@ impl Civ5p2p {
         let mut gossipsub = Gossipsub::new(MessageAuthenticity::Signed(self.keypair.clone()), gossipsub_config);
         gossipsub.subscribe(topic.clone());
 
-        let mut behaviour = Behaviour {
-            // gossipsub: Gossipsub::new(MessageAuthenticity::Signed(local_key.clone()), gossipsub_config),
+        let behaviour = Behaviour {
             identify: Identify::new(
                 "/civ5/0.1.0".into(),
                 "civ5".into(),
@@ -138,29 +137,6 @@ impl Civ5p2p {
         // Create a Swarm that establishes connections through the given transport
         // and applies the ping behaviour on each connection.
         let mut swarm = Swarm::new(transport, behaviour, peer_id.clone());
-
-        // if let Some(bootstrap_addr) = env::args().nth(2) {
-        //     let bootstrap_peer_id = env::args().nth(1).unwrap();
-        //     let bootstrap_peer_id = PeerId::from_str(&bootstrap_peer_id)?;
-        //     let bootstrap_addr: Multiaddr = bootstrap_addr.parse()?;
-        //     swarm.kademlia.add_address(&bootstrap_peer_id, bootstrap_addr);
-        //     // println!("Bootstrapping node to join DHT");
-        //     swarm.kademlia.bootstrap()?;
-        // };
-
-        // // Order Kademlia to search for a peer.
-        // if let Some(peer_id) = env::args().nth(3) {
-        //     let peer_id: PeerId = peer_id.parse()?;
-        //     swarm.kademlia.get_closest_peers(peer_id);
-        // };
-
-        // Dial the peer identified by the multi-address given as the second
-        // command-line argument, if any.
-        // if let Some(addr) = std::env::args().nth(1) {
-        //     let remote = addr.parse()?;
-        //     Swarm::dial_addr(&mut swarm, remote)?;
-        //     println!("Dialed {}", addr)
-        // }
 
         // Tell the swarm to listen on all interfaces and a random, OS-assigned port.
         Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
