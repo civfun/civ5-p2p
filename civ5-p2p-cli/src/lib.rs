@@ -7,6 +7,7 @@ use libp2p::identity::Keypair;
 use libp2p::PeerId;
 use libp2p::core::Multiaddr;
 use futures::SinkExt;
+use std::str::FromStr;
 
 pub struct CommandLineInterface {
     keypair: Keypair,
@@ -57,9 +58,12 @@ impl CommandLineInterface {
             None => println!("no command given"),
             Some("") => println!("no command given"),
             Some("bootstrap") => {
-                println!("bootstrap!");
-                self.action_tx.send(Action::Bootstrap(PeerId::random(), Multiaddr::empty())).await?;
-            },
+                let action = Action::Bootstrap(
+                    PeerId::from_str(parts.get(1).unwrap())?,
+                    parts.get(2).unwrap().parse()?,
+                );
+                self.action_tx.send(action).await?;
+            }
             Some(cmd) => println!("unknown command: {}", cmd),
         };
         Ok(())

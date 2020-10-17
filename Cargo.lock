@@ -534,10 +534,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ5-p2p"
-version = "0.1.0"
-
-[[package]]
 name = "civ5-p2p-app"
 version = "0.1.0"
 dependencies = [
