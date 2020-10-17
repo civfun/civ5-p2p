@@ -1,5 +1,5 @@
-use async_std::task;
-use futures::{future, prelude::*};
+use async_std::{task};
+use futures::{future, select, prelude::*};
 use std::{task::{Context, Poll}, env};
 use libp2p::ping::{Ping, PingEvent, PingSuccess, PingFailure, PingConfig};
 use libp2p::kad::{Kademlia, KademliaEvent};
@@ -78,7 +78,9 @@ impl NetworkBehaviourEventProcess<PingEvent> for Behaviour {
     }
 }
 
-pub enum Action {}
+pub enum Action {
+    Bootstrap(PeerId, Multiaddr),
+}
 
 pub enum Event {}
 
@@ -96,7 +98,7 @@ impl Civ5p2p {
     }
 
     pub async fn run(&self) -> Result<(mpsc::UnboundedSender<Action>, mpsc::UnboundedReceiver<Event>)> {
-        let (actions_tx, actions_rx) = mpsc::unbounded::<Action>();
+        let (actions_tx, mut actions_rx) = mpsc::unbounded::<Action>();
         let (events_tx, events_rx) = mpsc::unbounded::<Event>();
 
         let peer_id = PeerId::from(self.keypair.public());
@@ -155,7 +157,23 @@ impl Civ5p2p {
         Swarm::listen_on(&mut swarm, "/ip4/0.0.0.0/tcp/0".parse()?)?;
 
         let mut listening = false;
+
         task::spawn(future::poll_fn(move |cx: &mut Context<'_>| {
+            loop {
+                match actions_rx.poll_next_unpin(cx) {
+                    Poll::Ready(Some(action)) => {
+                        println!("action!");
+                        match action {
+                            Action::Bootstrap(peer_id, addr) => {
+                                swarm.kademlia.add_address(&peer_id, addr);
+                                swarm.kademlia.bootstrap().unwrap();
+                            }
+                        }
+                    }
+                    Poll::Ready(None) => { println!("actions_rx channel closed"); }
+                    Poll::Pending => break,
+                };
+            };
             loop {
                 match swarm.poll_next_unpin(cx) {
                     Poll::Ready(Some(event)) => println!("{:?}", event),
@@ -167,10 +185,11 @@ impl Civ5p2p {
                                 listening = true;
                             }
                         }
-                        return Poll::Pending;
+                        break;
                     }
                 }
             }
+            Poll::Pending
         }));
 
         Ok((actions_tx, events_rx))

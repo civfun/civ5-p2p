@@ -4,6 +4,9 @@ use civ5_p2p_core::{Civ5p2p, Action, Event};
 use futures::channel::mpsc;
 use anyhow::Result;
 use libp2p::identity::Keypair;
+use libp2p::PeerId;
+use libp2p::core::Multiaddr;
+use futures::SinkExt;
 
 pub struct CommandLineInterface {
     keypair: Keypair,
@@ -16,7 +19,7 @@ impl CommandLineInterface {
         Self { keypair, action_tx, event_rx }
     }
 
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
         let mut rl = Editor::<()>::new();
         // if rl.load_history("history.txt").is_err() {
         //     println!("No previous history.");
@@ -48,7 +51,17 @@ impl CommandLineInterface {
         Ok(())
     }
 
-    async fn handle_cmd(&self, line: &str) -> Result<()> {
+    async fn handle_cmd(&mut self, line: &str) -> Result<()> {
+        let parts = line.split_ascii_whitespace().collect::<Vec<_>>();
+        match parts.get(0).map(|p| p.as_ref()) {
+            None => println!("no command given"),
+            Some("") => println!("no command given"),
+            Some("bootstrap") => {
+                println!("bootstrap!");
+                self.action_tx.send(Action::Bootstrap(PeerId::random(), Multiaddr::empty())).await?;
+            },
+            Some(cmd) => println!("unknown command: {}", cmd),
+        };
         Ok(())
     }
 }

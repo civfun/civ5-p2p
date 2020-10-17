@@ -9,7 +9,7 @@ async fn main() -> Result<()> {
     let p2p = Civ5p2p::new(keypair.clone());
     let (action_tx, event_rx) = p2p.run().await?;
 
-    let cli = CommandLineInterface::new(keypair, action_tx, event_rx);
+    let mut cli = CommandLineInterface::new(keypair, action_tx, event_rx);
     cli.run().await?;
 
     Ok(())
